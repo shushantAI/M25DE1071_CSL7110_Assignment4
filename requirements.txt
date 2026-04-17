@@ -1,0 +1,4 @@
+numpy>=1.24
+pyspark>=3.4
+jupyter>=1.0
+ipykernel>=6.0

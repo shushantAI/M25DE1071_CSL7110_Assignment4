@@ -1,24 +1,4 @@
-"""
-Part 2 - Inverted index and a tiny search engine.
-
-I have kept the class layout faithful to the assignment (MySet, Position,
-WordEntry, PageIndex, PageEntry, MyHashTable, InvertedPageIndex,
-SearchEngine), but written the whole thing in idiomatic Python.
-
-Processing rules applied exactly as given:
-  - every token is lowercased
-  - connector words are NOT stored, but their position is counted so that
-    the surviving words keep their "original" 1-based index
-  - the listed punctuation symbols are each replaced with a single space
-  - the given singular/plural pairs collapse to one canonical form
-  - the three lists above are treated as exhaustive; no extra cleanup.
-
-Run:
-    python -m src.part2_websearch \
-        --pages data/q2/webpages \
-        --actions data/q2/actions.txt \
-        --answers data/q2/answers.txt
-"""
+"""Part 2 - Inverted index and search engine."""
 
 from __future__ import annotations
 import argparse
@@ -27,18 +7,15 @@ import re
 from typing import Dict, List, Optional, Set
 
 
-# -------------------------------------------------------------
-# constants from the assignment
-# -------------------------------------------------------------
+# connector
 CONNECTOR_WORDS: Set[str] = {
     "a", "an", "the", "they", "these", "this", "for", "is", "are", "was",
     "of", "or", "and", "does", "will", "whose",
 }
 
-# punctuation list from the PDF: { } [ ] < > = ( ) . , ; ' " ? # ! - :
+# punctuation list 
 PUNCT_CHARS = "{}[]<>=().,;'\"?#!-:"
 
-# (plural -> singular) so we can canonicalise lookups and stored tokens
 PLURAL_TO_SINGULAR: Dict[str, str] = {
     "stacks": "stack",
     "structures": "structure",
@@ -46,11 +23,8 @@ PLURAL_TO_SINGULAR: Dict[str, str] = {
 }
 
 
-# -------------------------------------------------------------
-# MySet
-# -------------------------------------------------------------
 class MySet:
-    """Thin wrapper over a Python set to mirror the required API."""
+    """Thin wrapper over a Python set."""
 
     def __init__(self, items=None):
         self._data: set = set(items) if items else set()
@@ -77,9 +51,6 @@ class MySet:
         return sorted(self._data)
 
 
-# -------------------------------------------------------------
-# Position  <page, word-index>
-# -------------------------------------------------------------
 class Position:
     __slots__ = ("_page", "_word_index")
 
@@ -97,9 +68,6 @@ class Position:
         return f"Position({self._page.getName()}, {self._word_index})"
 
 
-# -------------------------------------------------------------
-# WordEntry
-# -------------------------------------------------------------
 class WordEntry:
     def __init__(self, word: str):
         self._word = word
@@ -124,9 +92,6 @@ class WordEntry:
         )
 
 
-# -------------------------------------------------------------
-# PageIndex (per-page inverted index: word -> WordEntry)
-# -------------------------------------------------------------
 class PageIndex:
     def __init__(self):
         self._entries: Dict[str, WordEntry] = {}
@@ -149,33 +114,24 @@ class PageIndex:
         return self._entries.get(word)
 
 
-# -------------------------------------------------------------
 # tokenisation pipeline
-# -------------------------------------------------------------
 _PUNCT_RE = re.compile("[" + re.escape(PUNCT_CHARS) + "]")
 
 
 def _tokenise(raw_text: str) -> List[str]:
-    """Turn a raw file into a list of tokens using the rules from the PDF."""
+    """Tokenise raw text: lowercase and replace punctuation."""
     lowered = raw_text.lower()
     cleaned = _PUNCT_RE.sub(" ", lowered)
     return cleaned.split()
 
 
 def _canonical(tok: str) -> str:
-    """Map plurals in the exhaustive list to their singular form."""
+    """Map plurals to singular form."""
     return PLURAL_TO_SINGULAR.get(tok, tok)
 
 
-# -------------------------------------------------------------
-# PageEntry
-# -------------------------------------------------------------
 class PageEntry:
-    """Reads the webpage from disk and builds its PageIndex.
-
-    Word position is 1-based and includes connector words in the count,
-    but connector words themselves are never stored.
-    """
+    """Reads a webpage and builds its PageIndex."""
 
     def __init__(self, pageName: str, pagesDir: str):
         self._name = pageName
@@ -188,13 +144,13 @@ class PageEntry:
 
         for idx, tok in enumerate(tokens, start=1):
             if tok in CONNECTOR_WORDS:
-                # still counts towards the position, but is not stored
+                # counted in position but not stored
                 continue
             canon = _canonical(tok)
             pos = Position(self, idx)
             self._page_index.addPositionForWord(canon, pos)
 
-        self._num_tokens = len(tokens)  # used by TF if someone ever wants it
+        self._num_tokens = len(tokens)
 
     def getName(self) -> str:
         return self._name
@@ -203,16 +159,11 @@ class PageEntry:
         return self._page_index
 
 
-# -------------------------------------------------------------
-# MyHashTable : word -> WordEntry across all pages
-# -------------------------------------------------------------
 class MyHashTable:
     def __init__(self):
         self._table: Dict[str, WordEntry] = {}
 
     def getHashIndex(self, s: str) -> int:
-        # The assignment only requires "a hash function that maps a string
-        # to the index of its word-entry"; Python's built-in hash is fine.
         return hash(s)
 
     def addPositionsForWord(self, w: WordEntry) -> None:
@@ -220,8 +171,6 @@ class MyHashTable:
         if key in self._table:
             self._table[key].addPositions(w.getAllPositionsForThisWord())
         else:
-            # Keep an independent WordEntry so edits to one page's index
-            # don't leak into the global table.
             merged = WordEntry(key)
             merged.addPositions(w.getAllPositionsForThisWord())
             self._table[key] = merged
@@ -230,9 +179,6 @@ class MyHashTable:
         return self._table.get(word)
 
 
-# -------------------------------------------------------------
-# InvertedPageIndex
-# -------------------------------------------------------------
 class InvertedPageIndex:
     def __init__(self):
         self._hash = MyHashTable()
@@ -256,19 +202,16 @@ class InvertedPageIndex:
         return self._pages.get(name)
 
 
-# -------------------------------------------------------------
-# SearchEngine  (the tiny driver glueing everything together)
-# -------------------------------------------------------------
 class SearchEngine:
     def __init__(self, pagesDir: str):
         self._index = InvertedPageIndex()
         self._pages_dir = pagesDir
 
-    # --- actions ---------------------------------------------
+    # --- actions ---
     def _action_addPage(self, x: str) -> Optional[str]:
         page = PageEntry(x, self._pages_dir)
         self._index.addPage(page)
-        return None  # addPage is silent, matching the expected answers.txt
+        return None
 
     def _action_findPagesWithWord(self, x: str) -> str:
         w = _canonical(x.lower())
@@ -288,7 +231,7 @@ class SearchEngine:
         positions = sorted({pos.getWordIndex() for pos in we.getAllPositionsForThisWord()})
         return ", ".join(str(p) for p in positions)
 
-    # --- dispatcher ------------------------------------------
+    # --- dispatcher ---
     def performAction(self, actionMessage: str) -> Optional[str]:
         parts = actionMessage.strip().split()
         if not parts:
@@ -304,9 +247,6 @@ class SearchEngine:
         return f"Unknown action: {actionMessage}"
 
 
-# -------------------------------------------------------------
-# runner + answers-diff
-# -------------------------------------------------------------
 def run(pagesDir: str, actionsFile: str, answersFile: Optional[str]) -> None:
     engine = SearchEngine(pagesDir)
 
@@ -319,13 +259,12 @@ def run(pagesDir: str, actionsFile: str, answersFile: Optional[str]) -> None:
     print("=" * 60)
     for act in actions:
         out = engine.performAction(act)
-        if out is not None:          # addPage produces no visible output
+        if out is not None:
             produced.append(out)
             print(out)
 
     if answersFile and os.path.exists(answersFile):
         with open(answersFile, "r", encoding="utf-8") as f:
-            # strip trailing CR-LF noise, drop blank lines
             expected = [ln.rstrip("\r\n").strip() for ln in f if ln.strip()]
         print("=" * 60)
         print("Diff vs answers.txt:")

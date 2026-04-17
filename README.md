@@ -2,7 +2,6 @@
 
 **Name:** Shushant Kumar Tiwari
 **Roll No:** M25DE1071
-**Course:** CSL7110
 **Assignment:** Assignment 4 — Clustering and PageRank
 
 ---
@@ -51,14 +50,9 @@ M25DE1071_CSL7110_Assignment4/
 │   ├── part1_clustering.py
 │   ├── part2_search.py
 │   └── part3_pagerank.py
-├── notebooks/
-│   └── Assignment4_M25DE1071.ipynb
-├── outputs/
-│   ├── part1_run.txt
-│   ├── part2_run.txt
-│   └── part3_run.txt
-└── report/
-    └── M25DE1071_CSL7110_Assignment4.md
+└── notebooks/
+    └── Assignment4_M25DE1071.ipynb   
+
 ```
 
 ---
@@ -134,12 +128,3 @@ script prints the node IDs of the top 5 and bottom 5 ranks.
 
 ---
 
-## Notes
-
-- Report PDF filename: **`M25DE1071_CSL7110_Assignment4.pdf`**
-- GitHub repository link: *[Add GitHub Repo Link Here]*
-- All code was written and tested from scratch. Comments are kept minimal
-  but explain the non-obvious bits (the running-min trick in FFT, the
-  weighted sampling in k-means++, the handling of dangling nodes in
-  PageRank, and the connector-words / punctuation / singular-plural rules
-  in Part 2).

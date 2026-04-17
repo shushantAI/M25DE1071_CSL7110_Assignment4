@@ -1,23 +1,4 @@
-"""
-Part 3 - PageRank on Spark.
-
-Specification (from the assignment):
-  * directed graph, duplicate (u, v) edges collapsed to one.
-  * beta = 0.8, teleport probability = 1 - beta = 0.2.
-  * 40 iterations of the power method.
-  * r0 = 1/n for every node.
-  * Graph M is processed as an RDD.
-  * Dangling nodes (no out-edges) redistribute their mass uniformly so that
-    sum(r) stays at 1 across iterations.
-
-Datasets (download manually before running):
-  data/q3/small.txt   - 53 nodes   (top-most PageRank ~= 0.036)
-  data/q3/whole.txt   - 1000 nodes, 8192 edges
-
-Run:
-    python -m src.part3_pagerank --edges data/q3/small.txt
-    python -m src.part3_pagerank --edges data/q3/whole.txt
-"""
+"""Part 3 - PageRank using PySpark."""
 
 from __future__ import annotations
 import argparse
@@ -28,7 +9,7 @@ from pyspark import SparkConf, SparkContext
 
 
 def parse_edges(sc: SparkContext, path: str):
-    """Read whitespace-separated edge list -> deduplicated (src, dst) RDD."""
+    """Read edge list and return deduplicated (src, dst) RDD."""
     raw = sc.textFile(path)
     return (
         raw.map(lambda ln: ln.strip())
@@ -41,33 +22,18 @@ def parse_edges(sc: SparkContext, path: str):
 
 
 def pagerank(edges_rdd, num_iters: int = 40, beta: float = 0.8):
-    """Power-iteration PageRank.
-
-    Update rule per iteration for every node j:
-        r_new(j) = (1 - beta)/n
-                 + beta * sum_{i -> j} r(i)/deg(i)
-                 + beta * (dangling_mass) / n
-
-    Implementation notes:
-      * `links` (src -> [dst, ...]) is built once and cached.
-      * Rank updates are performed on driver-side dicts; each iteration
-        builds a fresh ranks RDD via `sc.parallelize`. This deliberately
-        keeps the RDD lineage flat -- a pure-RDD iterative join chain
-        grows linearly in depth with the iterations and typically blows
-        up after ~10-15 steps on a small cluster. With n=1000 the driver
-        side dict is tiny, so this trick is safe and fast.
-    """
+    """Power-iteration PageRank."""
     sc = edges_rdd.context
 
-    # adjacency: src -> [dst, ...]
+    # build adjacency list and cache
     links = (
         edges_rdd.groupByKey()
                  .mapValues(list)
                  .cache()
     )
-    links.count()                 # force materialisation
+    links.count()
 
-    # every vertex that appears anywhere in the edge list
+    # all vertices in the graph
     vertices = sorted(
         edges_rdd.flatMap(lambda e: [e[0], e[1]])
                  .distinct()
@@ -76,12 +42,11 @@ def pagerank(edges_rdd, num_iters: int = 40, beta: float = 0.8):
     n = len(vertices)
     source_set = set(links.keys().collect())
 
-    # driver-side rank vector
     ranks = {v: 1.0 / n for v in vertices}
     teleport = (1.0 - beta) / n
 
     for _ in range(num_iters):
-        # contributions pushed along every directed edge
+        # contributions from each edge
         ranks_rdd = sc.parallelize(list(ranks.items()), numSlices=4)
         contribs = (
             links.join(ranks_rdd)

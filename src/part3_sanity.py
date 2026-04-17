@@ -1,12 +1,4 @@
-"""Sanity checks for the PySpark PageRank implementation.
-
-Two cases executed under one SparkContext:
-  (a) 3-node directed cycle -> uniform stationary distribution 1/3.
-  (b) a small skewed graph -> compared against a numpy power iteration.
-
-If both agree within 1e-4, the Spark implementation is behaviourally
-correct on the classroom datasets (small.txt, whole.txt) too.
-"""
+"""Sanity checks for the PySpark PageRank implementation."""
 import os
 import tempfile
 import numpy as np

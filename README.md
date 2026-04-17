@@ -109,22 +109,3 @@ jupyter notebook notebooks/Assignment4_M25DE1071.ipynb
 The notebook has one section per part with short explanation cells,
 runnable code cells, and output cells.
 
----
-
-## Expected outputs
-
-**Part 1** — prints runtime of `kcenter`, the k-means objective after
-`kmeansPP`, and the objective after the coreset-style two-step procedure.
-On my run with k = 10 and k1 = 50 I get objectives roughly 95 359, 31 252,
-and 99 262 respectively (k-means++ is the best, as discussed in the
-report).
-
-**Part 2** — runs every line of `actions.txt` and compares the output
-against `answers.txt`. All 11 expected lines match.
-
-**Part 3** — on `small.txt` the top-most PageRank score comes out to
-about 0.036 (matches the assignment's sanity check). On `whole.txt` the
-script prints the node IDs of the top 5 and bottom 5 ranks.
-
----
-
